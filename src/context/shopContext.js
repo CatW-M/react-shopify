@@ -4,14 +4,14 @@ import Client from 'shopify-buy';
 const ShopContext = React.createContext();
 
 const client = Client.buildClient({
-  domain: process.env.REACT_APP_SHOPIFY_DOMAIN,
   storefrontAccessToken: process.env.REACT_APP_SHOPIFY_API,
+  domain: process.env.REACT_APP_SHOPIFY_DOMAIN,
 });
 
 class ShopProvider extends Component {
   state = {
+    products: [],
     product: {},
-    products: {},
     checkout: {},
     isCartOpen: false,
     isMenuOpen: false,
@@ -20,8 +20,9 @@ class ShopProvider extends Component {
   componentDidMount() {
     if (localStorage.checkout_id) {
       this.fetchCheckout(localStorage.checkout_id);
+    } else {
+      this.createCheckout();
     }
-    this.createCheckout();
   }
 
   createCheckout = async () => {
@@ -30,10 +31,13 @@ class ShopProvider extends Component {
     this.setState({ checkout });
   };
 
-  fetchCheckout = async (checkoutId) => {
-    client.checkout.fetch(checkoutId).then((checkout) => {
+  fetchCheckout = (checkoutId) => {
+    client.checkout
+    .fetch(checkoutId)
+    .then((checkout) => {
       this.setState({ checkout });
-    });
+    })
+    .catch((error) => console.log(error));
   };
 
   addItemToCheckout = async () => {};
@@ -47,7 +51,8 @@ class ShopProvider extends Component {
 
   fetchProductWithHandle = async (handle) => {
     const product = await client.product.fetchByHandle(handle);
-    this.setState({ product });
+    this.setState({ product: product });
+    return product;
   };
 
   closeCart = async () => {};
@@ -56,9 +61,23 @@ class ShopProvider extends Component {
   openMenu = async () => {};
 
   render() {
-    console.log(this.state.checkout);
-
-    return <ShopContext.Provider>{this.props.children}</ShopContext.Provider>;
+    return (
+      <ShopContext.Provider
+        value={{
+          ...this.state,
+          fetchAllProducts: this.fetchAllProducts,
+          fetchProductWithHandle: this.fetchProductWithHandle,
+          addItemToCheckout: this.addItemToCheckout,
+          removeLineItem: this.removeLineItem,
+          closeCart: this.closeCart,
+          openCart: this.openCart,
+          closeMenu: this.closeMenu,
+          openMenu: this.openMenu,
+        }}
+      >
+        {this.props.children}
+      </ShopContext.Provider>
+    );
   }
 }
 
